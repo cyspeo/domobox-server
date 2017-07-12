@@ -15,7 +15,7 @@ var config = require('./config'); // get our config file
 var morgan = require('morgan'); // Traces 
 var STORAGE_DIR = "../storage";
 
-console.log("__dirname = "+ __dirname);
+console.log("__dirname = " + __dirname);
 /**
  *INITIALISATION d'EXPRESS
  *  
@@ -51,7 +51,7 @@ app.use(function (req, res, next) {
  * 
  */
 //var dbCourses = new Datastore({ filename: STORAGE_DIR+"/courses", autoload: true});
-var dbUser = new Datastore({ filename: STORAGE_DIR+"/users", autoload: true });
+var dbUser = new Datastore({ filename: STORAGE_DIR + "/users", autoload: true });
 
 var toto = {};
 toto.name = "toto";
@@ -142,15 +142,54 @@ apiRoutes.use(function (req, res, next) {
 
 
 app.get('/api/piscine/programmation', function (req, res) {
-    var prog = require("./persistence/pisicne/programmation");
-    if (!prog) {
-        prog = {};
-        prog.plages = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,];
-        prog.relais = false;
-        fs.writeFileSync(".persistence/piscine/programmation.js",prog);
+    var prog = {};
+    try {
+        prog = fs.readFileSync(__dirname + "/persistence/piscine/programmation.js")
+    } catch (err) {
+        console.log("erro read", JSON.stringify(err));
+        if (err.code === 'ENOENT') {
+            prog = {plagesHoraires:[],relais:false};
+            for (var i = 0; i < 24; i++) {
+                prog.plagesHoraires[i] = false;
+            };
+            prog.relais = false;
+            try {
+                fs.mkdirp(__dirname + "/persistence/piscine");
+                fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog) , 'utf-8');
+            } catch (err) { throw err; }
+        } else {
+            console.log("erro read" + err.code);
+            throw err;
+        }
     }
+    console.log("no read");
     res.send(prog);
-})
+});
+
+app.post('/api/piscine/programmation', function (req, res) {
+    console.log("post prog "+ req.body);
+    var prog = req.body;
+      try {
+                fs.mkdirp(__dirname + "/persistence/piscine");
+                fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog) , 'utf-8');
+            } catch (err) { throw err; }
+});
+
+fs.isDir = function (dpath) {
+    try {
+        return fs.lstatSync(dpath).isDirectory();
+    } catch (e) {
+        return false;
+    }
+};
+fs.mkdirp = function (dirname) {
+    dirname = path.normalize(dirname).split(path.sep);
+    dirname.forEach((sdir, index) => {
+        var pathInQuestion = dirname.slice(0, index + 1).join(path.sep);
+        if ((!fs.isDir(pathInQuestion)) && pathInQuestion) fs.mkdirSync(pathInQuestion);
+    });
+};
+
 
 /**
  * 
