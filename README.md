@@ -1,2 +1,2 @@
-# serverdomobox
-Application serveur de ma domobox
+# domobox server
+Application serveur de ma domotique
