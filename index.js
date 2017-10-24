@@ -15,6 +15,7 @@ var config = require('./config'); // get our config file
 var morgan = require('morgan'); // Traces 
 var STORAGE_DIR = "../storage";
 
+
 console.log("__dirname = " + __dirname);
 /**
  *INITIALISATION d'EXPRESS
@@ -72,72 +73,37 @@ dbUser.insert(toto, function (err, newDoc) {
 // get an instance of the router for api routes
 var apiRoutes = express.Router();
 
+app.use(function (req, res, next) {
+    console.log("check authentificate " + req.headers);
+    var authHeader = req.headers.authorization;
+    if (!authHeader) {
+        var err = new Error("you are not authorization");
+        err.status = 401;
+        next(err);
+        return;
+    }
+    //console.log('authHeader :' + authHeader + " split " + authHeader.split(' ')[1]);
 
-// route to authenticate a user (POST http://localhost:8080/api/authenticate)
-apiRoutes.post('/authenticate', function (req, res) {
-    //Find user
-    dbUser.find({ name: req.body.name }, function (err, user) {
+    var auth = new Buffer(authHeader, 'base64').toString().split(':');
+    var user = auth[0];
+    var pass = auth[1];
+    //console.log("user="+user+" pass="+pass);
+    dbUser.find({ name: user }, function (err, user) {
         if (err) throw err;
         if (user.length === 0) {
-            console.log("user =" + JSON.stringify(user));
+            //console.log("user =" + JSON.stringify(user));
             res.json({ success: false, message: 'Authentication failed. User not found.' });
         } else if (user[0]) {
 
             // check if password matches
-            console.log("user =" + JSON.stringify(user[0]));
-            if (user[0].password != req.body.password) {
+            //console.log("user =" + JSON.stringify(user[0]));
+            if (user[0].password != pass) {
                 res.json({ success: false, message: 'Authentication failed. Wrong password.' });
             } else {
-
-                // if user is found and password is right
-                // create a token
-                var token = jwt.sign(user[0], app.get('superSecret'), {
-                    //expiresInMinutes: 5 // expires in 5 minutes
-                    expiresIn: 1440 * 06 // expires in 24 heures
-                });
-                // return the information including token as JSON
-                res.json({
-                    success: true,
-                    message: 'Enjoy your token!',
-                    token: token
-                });
+                 next();
             }
-
         }
-
     });
-});
-
-// route middleware to verify a token
-apiRoutes.use(function (req, res, next) {
-
-    // check header or url parameters or post parameters for token
-    var token = req.body.token || req.query.token || req.headers['x-access-token'];
-
-    // decode token
-    if (token) {
-
-        // verifies secret and checks exp
-        jwt.verify(token, app.get('superSecret'), function (err, decoded) {
-            if (err) {
-                return res.json({ success: false, message: 'Failed to authenticate token.' });
-            } else {
-                // if everything is good, save to request for use in other routes
-                req.decoded = decoded;
-                next();
-            }
-        });
-
-    } else {
-
-        // if there is no token
-        // return an error
-        return res.status(403).json({
-            success: false,
-            message: 'No token provided.'
-        });
-
-    }
 });
 
 
