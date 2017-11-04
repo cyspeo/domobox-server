@@ -13,7 +13,7 @@ var express = require('express')
 var jwt = require('jsonwebtoken'); // used to create, sign, and verify tokens
 var config = require('./config'); // get our config file    
 var morgan = require('morgan'); // Traces 
-var STORAGE_DIR = "../storage";
+var STORAGE_DIR = "./storage";
 
 
 console.log("__dirname = " + __dirname);
@@ -55,13 +55,19 @@ app.use(function (req, res, next) {
 var dbUser = new Datastore({ filename: STORAGE_DIR + "/users", autoload: true });
 
 var toto = {};
-toto.name = "toto";
-toto.password = "titi";
-toto.profile = "user";
- a executer une fis pour initialiser la table dbUser
-dbUser.insert(toto, function (err, newDoc) {   
-	console.log("users inserted");
+toto.name = "domobox";
+toto.password = "domoboxpw";
+toto.profile = "admin";
+//a executer une fis pour initialiser la table dbUser
+dbUser.find({ name: "domobox" }, function (err, user) {
+    if (err) throw err;
+    if (user.length === 0) {
+        dbUser.insert(toto, function (err, newDoc) {
+            console.log("users inserted");
+        });
+    }
 });
+
 
 // =======================
 // routes ================
@@ -100,7 +106,7 @@ app.use(function (req, res, next) {
             if (user[0].password != pass) {
                 res.json({ success: false, message: 'Authentication failed. Wrong password.' });
             } else {
-                 next();
+                next();
             }
         }
     });
@@ -114,14 +120,14 @@ app.get('/api/piscine/programmation', function (req, res) {
     } catch (err) {
         console.log("erro read", JSON.stringify(err));
         if (err.code === 'ENOENT') {
-            prog = {plagesHoraires:[],relais:false};
+            prog = { plagesHoraires: [], relais: false };
             for (var i = 0; i < 24; i++) {
                 prog.plagesHoraires[i] = false;
             };
             prog.relais = false;
             try {
                 fs.mkdirp(__dirname + "/persistence/piscine");
-                fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog) , 'utf-8');
+                fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog), 'utf-8');
             } catch (err) { throw err; }
         } else {
             console.log("erro read" + err.code);
@@ -133,12 +139,12 @@ app.get('/api/piscine/programmation', function (req, res) {
 });
 
 app.post('/api/piscine/programmation', function (req, res) {
-    console.log("post prog "+ req.body);
+    console.log("post prog " + req.body);
     var prog = req.body;
-      try {
-                fs.mkdirp(__dirname + "/persistence/piscine");
-                fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog) , 'utf-8');
-            } catch (err) { throw err; }
+    try {
+        fs.mkdirp(__dirname + "/persistence/piscine");
+        fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog), 'utf-8');
+    } catch (err) { throw err; }
 });
 
 fs.isDir = function (dpath) {
