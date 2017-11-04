@@ -40,7 +40,7 @@ app.use(function (req, res, next) {
     if (req.headers.origin) {
         res.header('Access-Control-Allow-Origin', '*')
         //res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization')
-        res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type')
+        res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization')
         res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE')
         if (req.method === 'OPTIONS') return res.send(200)
     }
@@ -58,10 +58,10 @@ var toto = {};
 toto.name = "toto";
 toto.password = "titi";
 toto.profile = "user";
-/* a executer une fis pour initialiser la table dbUser
+ a executer une fis pour initialiser la table dbUser
 dbUser.insert(toto, function (err, newDoc) {   
 	console.log("users inserted");
-});*/
+});
 
 // =======================
 // routes ================
