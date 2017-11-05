@@ -1,1 +1,1 @@
-{"plagesHoraires":[true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],"relais":false}
+{"{\n  \"plagesHoraires\": ":{"\n    true,\n    true,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    true,\n    true,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false\n  ],\n  \"relais\": false\n":""}}

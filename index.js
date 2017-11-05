@@ -36,15 +36,12 @@ console.log("express static " + __dirname + './public');
 
 // use morgan to log requests to the console
 app.use(morgan('dev'));
-app.use(function (req, res, next) {
-    if (req.headers.origin) {
-        res.header('Access-Control-Allow-Origin', '*')
-        //res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization')
-        res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization')
-        res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE')
-        if (req.method === 'OPTIONS') return res.send(200)
-    }
-    next()
+
+app.options("/*", function(req, res, next){
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+  res.send(200);
 });
 
 /**
@@ -80,6 +77,13 @@ dbUser.find({ name: "domobox" }, function (err, user) {
 var apiRoutes = express.Router();
 
 app.use(function (req, res, next) {
+    if (req.headers.origin) {
+        res.header('Access-Control-Allow-Origin', '*')
+        //res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization')
+        res.header('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization')
+        res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE,OPTIONS')
+    }
+
     console.log("check authentificate " + req.headers);
     var authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -93,7 +97,7 @@ app.use(function (req, res, next) {
     var auth = new Buffer(authHeader, 'base64').toString().split(':');
     var user = auth[0];
     var pass = auth[1];
-    //console.log("user="+user+" pass="+pass);
+    console.log("user="+user+" pass="+pass);
     dbUser.find({ name: user }, function (err, user) {
         if (err) throw err;
         if (user.length === 0) {
