@@ -84,7 +84,7 @@ app.use(function (req, res, next) {
         res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE,OPTIONS')
     }
 
-    console.log("check authentificate " + req.headers);
+    console.log("check authentificate " + req.method );
     var authHeader = req.headers.authorization;
     if (!authHeader) {
         var err = new Error("you are not authorization");
@@ -92,9 +92,9 @@ app.use(function (req, res, next) {
         next(err);
         return;
     }
-    //console.log('authHeader :' + authHeader + " split " + authHeader.split(' ')[1]);
+    console.log('authHeader :' + authHeader + " split " + authHeader.split(' ')[1]);
 
-    var auth = new Buffer(authHeader, 'base64').toString().split(':');
+    var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
     var user = auth[0];
     var pass = auth[1];
     console.log("user="+user+" pass="+pass);
