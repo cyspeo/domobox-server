@@ -37,11 +37,11 @@ console.log("express static " + __dirname + './public');
 // use morgan to log requests to the console
 app.use(morgan('dev'));
 
-app.options("/*", function(req, res, next){
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  res.send(200);
+app.options("/*", function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+    res.send(200);
 });
 
 /**
@@ -50,6 +50,7 @@ app.options("/*", function(req, res, next){
  */
 //var dbCourses = new Datastore({ filename: STORAGE_DIR+"/courses", autoload: true});
 var dbUser = new Datastore({ filename: STORAGE_DIR + "/users", autoload: true });
+var dbProgPiscine = new Datastore({ filename: STORAGE_DIR + "/programmation_piscine", autoload: true });
 
 var toto = {};
 toto.name = "domobox";
@@ -84,7 +85,7 @@ app.use(function (req, res, next) {
         res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE,OPTIONS')
     }
 
-    console.log("check authentificate " + req.method );
+    console.log("check authentificate " + req.method);
     var authHeader = req.headers.authorization;
     if (!authHeader) {
         var err = new Error("you are not authorization");
@@ -97,7 +98,7 @@ app.use(function (req, res, next) {
     var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
     var user = auth[0];
     var pass = auth[1];
-    console.log("user="+user+" pass="+pass);
+    console.log("user=" + user + " pass=" + pass);
     dbUser.find({ name: user }, function (err, user) {
         if (err) throw err;
         if (user.length === 0) {
@@ -118,37 +119,27 @@ app.use(function (req, res, next) {
 
 
 app.get('/api/piscine/programmation', function (req, res) {
-    var prog = {};
-    try {
-        prog = fs.readFileSync(__dirname + "/persistence/piscine/programmation.js")
-    } catch (err) {
-        console.log("erro read", JSON.stringify(err));
-        if (err.code === 'ENOENT') {
-            prog = { plagesHoraires: [], relais: false };
+    dbProgPiscine.find({}).sort({_id:-1}).exec(function (err, docs) {
+        if (err) throw err;
+        if (docs.length === 0) {
+            var prog = {};
+            prog.plagesHoraires = [];
             for (var i = 0; i < 24; i++) {
-                prog.plagesHoraires[i] = false;
+               prog.plagesHoraires[i] = false;
             };
-            prog.relais = false;
-            try {
-                fs.mkdirp(__dirname + "/persistence/piscine");
-                fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog), 'utf-8');
-            } catch (err) { throw err; }
+            res.send(prog);
         } else {
-            console.log("erro read" + err.code);
-            throw err;
+            res.send(docs[0]);
         }
-    }
-    console.log("no read");
-    res.send(prog);
+    });
 });
 
 app.post('/api/piscine/programmation', function (req, res) {
-    console.log("post prog " + req.body);
     var prog = req.body;
-    try {
-        fs.mkdirp(__dirname + "/persistence/piscine");
-        fs.writeFileSync(__dirname + "/persistence/piscine/programmation.js", JSON.stringify(prog), 'utf-8');
-    } catch (err) { throw err; }
+    //console.log("post prog " + JSON.stringify(req.body));
+    dbProgPiscine.insert(prog,function(err, newdoc) {
+        //console.log("post prog new doc" + JSON.stringify(newdoc));
+    });
 });
 
 fs.isDir = function (dpath) {
