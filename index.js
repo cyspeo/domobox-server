@@ -51,6 +51,7 @@ app.options("/*", function (req, res, next) {
 //var dbCourses = new Datastore({ filename: STORAGE_DIR+"/courses", autoload: true});
 var dbUser = new Datastore({ filename: STORAGE_DIR + "/users", autoload: true });
 var dbProgPiscine = new Datastore({ filename: STORAGE_DIR + "/programmation_piscine", autoload: true });
+var dbAutoincrement = new Datastore({ filename: STORAGE_DIR + "/autoincrement.db", autoload: true });
 
 var toto = {};
 toto.name = "domobox";
@@ -118,14 +119,55 @@ app.use(function (req, res, next) {
 });
 
 
+
+
+function getUniqueId(nameDb, cb) {
+    dbAutoincrement.findOne({ name: nameDb }, function (err, doc) {
+        if (err) {
+            throw err;
+        } else {
+            if (doc) {
+                const itemID = doc.nextId + 1;
+                dbAutoincrement.update({ name: nameDb }, {
+                    name: nameDb,
+                    nextId: itemID
+                }, {}, function (err, numReplaced) {
+                    dbAutoincrement.persistence.compactDatafile();
+                    if (err) {
+                        throw err;
+                    } else {
+                        // console.log(numReplaced);
+                    }
+                    cb(doc.nextId);
+                });
+            } else {
+                const data = {
+                    name: nameDb,
+                    nextId: 2
+                };
+
+                dbAutoincrement.insert(data, function (err, newDoc) {
+                    if (err) {
+                        throw err;
+                    } else {
+                        // console.log(newDoc);
+                    }
+                    cb(1);
+                });
+            }
+        }
+
+    });
+}
+
 app.get('/api/piscine/programmation', function (req, res) {
-    dbProgPiscine.find({}).sort({_id:-1}).exec(function (err, docs) {
+    dbProgPiscine.find({}).sort({ itemId: -1 }).exec(function (err, docs) {
         if (err) throw err;
         if (docs.length === 0) {
             var prog = {};
             prog.plagesHoraires = [];
             for (var i = 0; i < 24; i++) {
-               prog.plagesHoraires[i] = false;
+                prog.plagesHoraires[i] = false;
             };
             res.send(prog);
         } else {
@@ -136,10 +178,20 @@ app.get('/api/piscine/programmation', function (req, res) {
 
 app.post('/api/piscine/programmation', function (req, res) {
     var prog = req.body;
-    //console.log("post prog " + JSON.stringify(req.body));
-    dbProgPiscine.insert(prog,function(err, newdoc) {
+
+    getUniqueId("progPiscine", function (uniqueId) {
+        prog.itemId = uniqueId;
+        prog.date = new Date().toISOString();
+        console.log("prog"+ JSON.stringify(prog));
+        dbProgPiscine.insert(prog, function (err, newdoc) {
+        if (err) {
+                throw err;
+        }
         //console.log("post prog new doc" + JSON.stringify(newdoc));
     });
+        });
+
+    
 });
 
 fs.isDir = function (dpath) {
