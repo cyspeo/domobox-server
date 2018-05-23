@@ -1,3 +1,4 @@
+
 var express = require('express')
     , http = require('http')
     , bodyParser = require('body-parser')
@@ -8,7 +9,8 @@ var express = require('express')
     , path = require('path')
     , join = require("path").join
     , nedb = require('nedb')
-    , child_process = require("child_process");
+    , child_process = require("child_process")
+    , request = require('request');
 
 var jwt = require('jsonwebtoken'); // used to create, sign, and verify tokens
 var config = require('./config'); // get our config file    
@@ -50,17 +52,18 @@ app.options("/*", function (req, res, next) {
  */
 //var dbCourses = new Datastore({ filename: STORAGE_DIR+"/courses", autoload: true});
 var dbUser = new Datastore({ filename: STORAGE_DIR + "/users", autoload: true });
-var dbProgPiscine = new Datastore({ filename: STORAGE_DIR + "/programmation_piscine", autoload: true });
-var dbAutoincrement = new Datastore({ filename: STORAGE_DIR + "/autoincrement.db", autoload: true });
 
-var toto = {};
-toto.name = "domobox";
-toto.password = "domoboxpw";
-toto.profile = "admin";
-//a executer une fis pour initialiser la table dbUser
+
+
+//a executer une fois pour initialiser la table dbUser
+
 dbUser.find({ name: "domobox" }, function (err, user) {
     if (err) throw err;
     if (user.length === 0) {
+        var toto = {};
+        toto.name = "domobox";
+        toto.password = "domoboxpw";
+        toto.profile = "admin";
         dbUser.insert(toto, function (err, newDoc) {
             console.log("users inserted");
         });
@@ -86,7 +89,7 @@ app.use(function (req, res, next) {
         res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE,OPTIONS')
     }
 
-    console.log("check authentificate " + req.method);
+    console.debug("check authentificate " + req.method);
     var authHeader = req.headers.authorization;
     if (!authHeader) {
         var err = new Error("you are not authorization");
@@ -94,19 +97,18 @@ app.use(function (req, res, next) {
         next(err);
         return;
     }
-    console.log('authHeader :' + authHeader + " split " + authHeader.split(' ')[1]);
+    console.debug('authHeader :' + authHeader + " split " + authHeader.split(' ')[1]);
 
     var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
     var user = auth[0];
     var pass = auth[1];
-    console.log("user=" + user + " pass=" + pass);
+    console.debug("user=" + user + " pass=" + pass);
     dbUser.find({ name: user }, function (err, user) {
         if (err) throw err;
         if (user.length === 0) {
             //console.log("user =" + JSON.stringify(user));
             res.json({ success: false, message: 'Authentication failed. User not found.' });
         } else if (user[0]) {
-
             // check if password matches
             //console.log("user =" + JSON.stringify(user[0]));
             if (user[0].password != pass) {
@@ -119,103 +121,86 @@ app.use(function (req, res, next) {
 });
 
 
-
-
-function getUniqueId(nameDb, cb) {
-    dbAutoincrement.findOne({ name: nameDb }, function (err, doc) {
-        if (err) {
-            throw err;
-        } else {
-            if (doc) {
-                const itemID = doc.nextId + 1;
-                dbAutoincrement.update({ name: nameDb }, {
-                    name: nameDb,
-                    nextId: itemID
-                }, {}, function (err, numReplaced) {
-                    dbAutoincrement.persistence.compactDatafile();
-                    if (err) {
-                        throw err;
-                    } else {
-                        // console.log(numReplaced);
-                    }
-                    cb(doc.nextId);
-                });
-            } else {
-                const data = {
-                    name: nameDb,
-                    nextId: 2
-                };
-
-                dbAutoincrement.insert(data, function (err, newDoc) {
-                    if (err) {
-                        throw err;
-                    } else {
-                        // console.log(newDoc);
-                    }
-                    cb(1);
-                });
-            }
-        }
-
-    });
-}
-
+/**
+ * Call connected object to get the programmation
+ */
 app.get('/api/piscine/programmation', function (req, res) {
-    dbProgPiscine.find({}).sort({ itemId: -1 }).exec(function (err, docs) {
-        if (err) throw err;
-        if (docs.length === 0) {
-            var prog = {};
-            prog.plagesHoraires = [];
-            for (var i = 0; i < 24; i++) {
-                prog.plagesHoraires[i] = false;
-            };
-            res.send(prog);
+
+    request({
+        uri: config.piscineHost+"/get/piscine/programmation",
+        method: "GET",
+        timeout: 10000,
+        followRedirect: true,
+        maxRedirects: 10
+    }, function (error, response, body) {
+        if (error) {
+            console.error("GET /api/piscine/programmation ERROR : " + error)
         } else {
-            res.send(docs[0]);
+            console.log("GET /api/piscine/programmation =>" + body);
+            res.send(body)
         }
     });
 });
 
+/**
+ * Post programmation to the connected object
+ */
 app.post('/api/piscine/programmation', function (req, res) {
     var prog = req.body;
-
-    getUniqueId("progPiscine", function (uniqueId) {
-        prog.itemId = uniqueId;
-        prog.date = new Date().toISOString();
-        console.log("prog"+ JSON.stringify(prog));
-        dbProgPiscine.insert(prog, function (err, newdoc) {
-        if (err) {
-                throw err;
+    request({
+        uri: config.piscineHost+"/post/piscine/programmation",
+        method: "POST",
+        form: {
+            programmation: req.body.programmation,
+            mode:req.body.mode,
+            hour:new Date().getHours(),
+            minute: new Date().getMinutes(),
+            token:"cyspeo-iot"
+          }       
+    }, function (error, response, body) {
+        if (error) {
+            console.error("POST /api/piscine/programmation ERROR : " + error)
+        } else {
+            console.log("POST /api/piscine/programmation =>" + body);
+            res.send("")
         }
-        //console.log("post prog new doc" + JSON.stringify(newdoc));
     });
-        });
-
-    
 });
 
-fs.isDir = function (dpath) {
-    try {
-        return fs.lstatSync(dpath).isDirectory();
-    } catch (e) {
-        return false;
-    }
-};
-fs.mkdirp = function (dirname) {
-    dirname = path.normalize(dirname).split(path.sep);
-    dirname.forEach((sdir, index) => {
-        var pathInQuestion = dirname.slice(0, index + 1).join(path.sep);
-        if ((!fs.isDir(pathInQuestion)) && pathInQuestion) fs.mkdirSync(pathInQuestion);
+/**
+ * Post time to the connected object
+ * This request will be call every hours
+ */
+var postTime =  function () {
+    console.debug("POST time to IOT ");
+    var prog = req.body;
+    request({
+        uri: config.piscineHost,
+        method: "POST",
+        form: {
+            hour:new Date().getHours(),
+            minute: new Date().getMinutes(),
+            token:"cyspeo-iot"
+          }       
+    }, function (error, response, body) {
+        if (error) {
+            console.error("POST /api/piscine/time ERROR : " + error)
+        } else {
+            console.log("POST /api/piscine/time =>" + body);
+            res.send("")
+        }
     });
-};
-
+}
 
 /**
  * 
  * LANCEMENT DU SERVEUR 
  */
 
+setInterval(function() {
+    postTime();
+},3600000);
 
 app.listen(http_port);
 console.log("Server Listening on " + http_port);
-console.log("Go to  http://mon serveur:3001/ ");
+

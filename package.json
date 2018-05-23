@@ -48,6 +48,7 @@
     "nedb": "^0.10.5",
     "nedb-party": "^0.1.1",
     "qunitjs": "^1.17.1",
+    "request": "^2.87.0",
     "underscore": "^1.8.3"
   }
 }
